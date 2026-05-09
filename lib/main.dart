@@ -60,7 +60,7 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Roboto',
       ),
       themeMode: ThemeMode.dark,
-      home: const MainNavigation(),
+      home: const AuthWrapper(),
       routes: {
         MainNavigation.routeName: (context) => const MainNavigation(),
         '/home': (context) => const HomeScreen(),
