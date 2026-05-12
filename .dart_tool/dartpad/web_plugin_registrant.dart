@@ -7,6 +7,7 @@
 // ignore_for_file: type=lint
 
 import 'package:app_links_web/app_links_web.dart';
+import 'package:geolocator_web/geolocator_web.dart';
 import 'package:google_sign_in_web/google_sign_in_web.dart';
 import 'package:rive_native/rive_native_plugin_web.dart';
 import 'package:shared_preferences_web/shared_preferences_web.dart';
@@ -16,6 +17,7 @@ import 'package:flutter_web_plugins/flutter_web_plugins.dart';
 void registerPlugins([final Registrar? pluginRegistrar]) {
   final Registrar registrar = pluginRegistrar ?? webPluginRegistrar;
   AppLinksPluginWeb.registerWith(registrar);
+  GeolocatorPlugin.registerWith(registrar);
   GoogleSignInPlugin.registerWith(registrar);
   RiveNativePlugin.registerWith(registrar);
   SharedPreferencesPlugin.registerWith(registrar);

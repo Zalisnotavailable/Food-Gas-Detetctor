@@ -4,6 +4,7 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   app_links
+  geolocator_windows
   rive_native
   url_launcher_windows
 )

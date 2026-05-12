@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
 import '../services/sensor_service.dart';
+import '../services/refresh_notifier.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -12,11 +15,57 @@ class _HomeScreenState extends State<HomeScreen> {
   SensorReading? _latest;
   bool _isLoading = true;
   DateTime? _lastUpdate;
+  String _lokasi = 'Memuat lokasi...'; // ← TAMBAHAN
 
   @override
   void initState() {
     super.initState();
     _loadData();
+    _getLocation(); // ← TAMBAHAN
+  }
+
+  // ← TAMBAHAN: fungsi ambil lokasi GPS
+  Future<void> _getLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) {
+        setState(() => _lokasi = 'GPS tidak aktif');
+        return;
+      }
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          setState(() => _lokasi = 'Izin lokasi ditolak');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        setState(() => _lokasi = 'Izin lokasi ditolak permanen');
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.medium,
+      );
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        setState(() {
+          _lokasi = '${place.subLocality ?? place.locality ?? 'Tidak diketahui'}, '
+              '${place.subAdministrativeArea ?? place.administrativeArea ?? ''}';
+        });
+      }
+    } catch (e) {
+      setState(() => _lokasi = 'Gagal ambil lokasi');
+    }
   }
 
   Future<void> _loadData() async {
@@ -29,7 +78,6 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  // Hitung sensor yang melewati batas aman
   List<String> _getDangerSensors() {
     if (_latest == null) return [];
     final sensors = {
@@ -97,10 +145,11 @@ class _HomeScreenState extends State<HomeScreen> {
             SliverPersistentHeader(
               pinned: true,
               delegate: _FixedHeaderDelegate(
-                height: 300,
+                height: 240,
                 child: _HeaderCard(
                   isOnline: isOnline,
                   lastUpdate: _formatTime(_latest?.timestamp),
+                  lokasi: _lokasi, // ← TAMBAHAN
                 ),
               ),
             ),
@@ -125,7 +174,6 @@ class _HomeScreenState extends State<HomeScreen> {
                 ],
               ),
             ),
-            // Alert banner hanya muncul jika ada sensor yang melewati batas
             if (allAlert.isNotEmpty)
               SliverToBoxAdapter(
                 child: _AlertBanner(
@@ -143,7 +191,10 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
       ),
-      floatingActionButton: _RefreshFab(onPressed: _loadData),
+      floatingActionButton: _RefreshFab(onPressed: () {
+        _loadData();                  // refresh home
+        refreshNotifier.refreshAll(); // refresh semua page lain
+      }),
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
     );
   }
@@ -152,9 +203,14 @@ class _HomeScreenState extends State<HomeScreen> {
 // ─── Header ───────────────────────────────────────────────────────────────────
 
 class _HeaderCard extends StatelessWidget {
-  const _HeaderCard({required this.isOnline, required this.lastUpdate});
+  const _HeaderCard({
+    required this.isOnline,
+    required this.lastUpdate,
+    required this.lokasi, // ← TAMBAHAN
+  });
   final bool isOnline;
   final String lastUpdate;
+  final String lokasi; // ← TAMBAHAN
 
   @override
   Widget build(BuildContext context) {
@@ -184,9 +240,8 @@ class _HeaderCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const _InfoRow(label: 'Lokasi:',   value: 'SDN 01 Jakarta'),
-                const _InfoRow(label: 'Operator:', value: 'Dr. Sarah, S.Gz'),
-                _InfoRow(label: 'Update:',  value: lastUpdate),
+                _InfoRow(label: 'Lokasi:', value: lokasi), // ← DIUBAH
+                _InfoRow(label: 'Update:', value: lastUpdate),
               ],
             ),
           ),
@@ -394,18 +449,18 @@ class _RecommendationCard extends StatelessWidget {
                     color: Colors.teal.shade600,
                     borderRadius: BorderRadius.circular(10)),
                 alignment: Alignment.center,
-                child: const Text('AI',
+                child: const Text('💡',
                     style: TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w700)),
               ),
               const SizedBox(width: 12),
               const Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Rekomendasi Deep Learning',
+                Text('Rekomendasi Tindakan',
                     style: TextStyle(
                         fontWeight: FontWeight.w800,
                         fontSize: 16,
                         color: Colors.black)),
-                Text('LSTM + DRL Analysis',
+                Text('Berdasarkan Kesimpulan Sementara',
                     style: TextStyle(color: Colors.black54, fontSize: 12)),
               ]),
             ]),

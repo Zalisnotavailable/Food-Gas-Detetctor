@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import '../services/sensor_service.dart';
+import '../services/refresh_notifier.dart';
 
 class AnalysisScreen extends StatefulWidget {
   const AnalysisScreen({super.key});
@@ -20,6 +21,15 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   void initState() {
     super.initState();
     _loadData();
+    refreshNotifier.addListener(_onGlobalRefresh); // ← tambah
+  }
+
+  void _onGlobalRefresh() => _loadData(); // ← tambah
+
+  @override
+  void dispose() {
+    refreshNotifier.removeListener(_onGlobalRefresh); // ← tambah
+    super.dispose();
   }
 
   Future<void> _loadData() async {
