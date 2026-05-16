@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/refresh_notifier.dart';
+import '../services/tray_pdf_service.dart';
 
 // ─── Model ────────────────────────────────────────────────────────────────────
 enum _TrayStatus { safe, warning, danger }
@@ -370,6 +371,19 @@ class _TrayCard extends StatelessWidget {
               ),
               Column(children: [
                 _SmallButton(label: 'Detail', color: const Color(0xFF0284C7), onTap: () => _showDetail(context)),
+                const SizedBox(height: 8),
+                _SmallButton(
+                  label: 'PDF',
+                  color: const Color(0xFF10B981),
+                  onTap: () => TrayPdfService.generateAndShare(
+                    trayId:    item.trayId,
+                    datetime:  item.formattedDate,
+                    status:    item.status == _TrayStatus.danger  ? 'Bahaya'
+                        : item.status == _TrayStatus.warning ? 'Warning'
+                        : 'Aman',
+                    gasValues: item.gasValues,
+                  ),
+                ),
               ]),
             ],
           ),

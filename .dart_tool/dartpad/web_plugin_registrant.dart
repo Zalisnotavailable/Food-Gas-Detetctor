@@ -9,6 +9,8 @@
 import 'package:app_links_web/app_links_web.dart';
 import 'package:geolocator_web/geolocator_web.dart';
 import 'package:google_sign_in_web/google_sign_in_web.dart';
+import 'package:package_info_plus/src/package_info_plus_web.dart';
+import 'package:printing/printing_web.dart';
 import 'package:rive_native/rive_native_plugin_web.dart';
 import 'package:shared_preferences_web/shared_preferences_web.dart';
 import 'package:url_launcher_web/url_launcher_web.dart';
@@ -19,6 +21,8 @@ void registerPlugins([final Registrar? pluginRegistrar]) {
   AppLinksPluginWeb.registerWith(registrar);
   GeolocatorPlugin.registerWith(registrar);
   GoogleSignInPlugin.registerWith(registrar);
+  PackageInfoPlusWebPlugin.registerWith(registrar);
+  PrintingPlugin.registerWith(registrar);
   RiveNativePlugin.registerWith(registrar);
   SharedPreferencesPlugin.registerWith(registrar);
   UrlLauncherPlugin.registerWith(registrar);
