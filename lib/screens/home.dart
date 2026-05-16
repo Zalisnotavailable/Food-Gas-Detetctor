@@ -226,7 +226,7 @@ class _HeaderCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('FoodGuard Pro',
+          Text('WITFood',
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: Colors.white, fontWeight: FontWeight.w800)),
           const SizedBox(height: 6),

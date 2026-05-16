@@ -46,7 +46,7 @@ class TrayPdfService {
                   crossAxisAlignment: pw.CrossAxisAlignment.start,
                   children: [
                     pw.Text(
-                      'FoodGuard Pro',
+                      'WITFood',
                       style: pw.TextStyle(
                         fontSize: 24,
                         fontWeight: pw.FontWeight.bold,
@@ -179,7 +179,7 @@ class TrayPdfService {
               pw.Divider(),
               pw.SizedBox(height: 6),
               pw.Text(
-                'Dokumen ini digenerate otomatis oleh FoodGuard Pro.',
+                'Dokumen ini digenerate otomatis oleh WITFood.',
                 style: const pw.TextStyle(fontSize: 10, color: PdfColors.grey),
               ),
               pw.Text(

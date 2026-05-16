@@ -57,7 +57,7 @@ class AuthService {
       final smtpUser = dotenv.env['SMTP_USERNAME'];
       final smtpPass = dotenv.env['SMTP_PASSWORD'];
       final fromEmail = dotenv.env['FROM_EMAIL'] ?? smtpUser;
-      final appName = dotenv.env['APP_NAME'] ?? 'FoodGuardPro';
+      final appName = dotenv.env['APP_NAME'] ?? 'WITFood';
 
       if (smtpHost == null || smtpUser == null || smtpPass == null) {
         throw Exception('SMTP configuration missing in .env');

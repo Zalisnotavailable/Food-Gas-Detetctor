@@ -231,7 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Food Goard Pro',
+                    'WITFood',
                     style: theme.textTheme.bodyMedium?.copyWith(color: Colors.white70),
                   ),
                   const SizedBox(height: 24),

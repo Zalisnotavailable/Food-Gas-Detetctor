@@ -184,7 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   const _HeaderIllustration(),
                   const SizedBox(height: 12),
                   Text(
-                    'Food Goard Pro',
+                    'WITFood',
                     style: theme.textTheme.headlineMedium?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
