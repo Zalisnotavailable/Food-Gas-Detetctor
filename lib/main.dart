@@ -13,7 +13,8 @@ import 'screens/profile.dart';
 import 'auth/auth_service.dart';
 import 'screens/forgot_token.dart';
 import 'screens/forgot_new.dart';
-import 'screens/for_newuser.dart'; 
+import 'screens/for_newuser.dart';
+import '../services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -93,6 +94,7 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
+    NotificationService.init();
     _checkAuthStatus();
   }
 

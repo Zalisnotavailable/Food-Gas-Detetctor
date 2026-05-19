@@ -3,6 +3,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import '../services/sensor_service.dart';
 import '../services/refresh_notifier.dart';
+import '../services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -76,6 +77,14 @@ class _HomeScreenState extends State<HomeScreen> {
       _lastUpdate = DateTime.now();
       _isLoading = false;
     });
+
+    final danger  = _getDangerSensors();
+    final warning = _getWarningSensors();
+    await NotificationService.showSensorNotification(
+      status: danger.isNotEmpty ? 'danger' : warning.isNotEmpty ? 'warning' : 'aman',
+      dangerSensors: danger,
+      warningSensors: warning,
+    );
   }
 
   List<String> _getDangerSensors() {

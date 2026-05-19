@@ -1,3 +1,5 @@
+import 'dart:io';                              // ← tambah
+import 'package:path_provider/path_provider.dart'; // ← tambah
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
@@ -192,9 +194,18 @@ class TrayPdfService {
       ),
     );
 
-    // Share / download PDF
+    // Simpan & share PDF
+    final bytes = await pdf.save();
+
+// Simpan permanen ke storage HP
+    final dir      = await getExternalStorageDirectory();
+    final filePath = '${dir!.path}/$trayId.pdf';
+    final file     = File(filePath);
+    await file.writeAsBytes(bytes);
+
+// Share ke user
     await Printing.sharePdf(
-      bytes: await pdf.save(),
+      bytes: bytes,
       filename: '$trayId.pdf',
     );
   }
