@@ -11,6 +11,8 @@
         "awesome_snackbar_content",
         "crypto",
         "cupertino_icons",
+        "firebase_core",
+        "firebase_messaging",
         "fl_chart",
         "flutter",
         "flutter_dotenv",
@@ -275,12 +277,36 @@
       "dependencies": []
     },
     {
+      "name": "json_annotation",
+      "version": "4.12.0",
+      "dependencies": [
+        "meta"
+      ]
+    },
+    {
       "name": "image",
       "version": "4.8.0",
       "dependencies": [
         "archive",
         "meta",
         "xml"
+      ]
+    },
+    {
+      "name": "cli_util",
+      "version": "0.4.2",
+      "dependencies": [
+        "meta",
+        "path"
+      ]
+    },
+    {
+      "name": "checked_yaml",
+      "version": "2.0.4",
+      "dependencies": [
+        "json_annotation",
+        "source_span",
+        "yaml"
       ]
     },
     {
@@ -1400,26 +1426,82 @@
       ]
     },
     {
-      "name": "cli_util",
-      "version": "0.4.2",
+      "name": "firebase_messaging",
+      "version": "15.2.10",
       "dependencies": [
+        "firebase_core",
+        "firebase_core_platform_interface",
+        "firebase_messaging_platform_interface",
+        "firebase_messaging_web",
+        "flutter",
+        "meta"
+      ]
+    },
+    {
+      "name": "firebase_core",
+      "version": "3.15.2",
+      "dependencies": [
+        "firebase_core_platform_interface",
+        "firebase_core_web",
+        "flutter",
+        "meta"
+      ]
+    },
+    {
+      "name": "firebase_messaging_web",
+      "version": "3.10.10",
+      "dependencies": [
+        "_flutterfire_internals",
+        "firebase_core",
+        "firebase_core_web",
+        "firebase_messaging_platform_interface",
+        "flutter",
+        "flutter_web_plugins",
         "meta",
-        "path"
+        "web"
       ]
     },
     {
-      "name": "checked_yaml",
-      "version": "2.0.4",
+      "name": "firebase_core_web",
+      "version": "2.24.1",
       "dependencies": [
-        "json_annotation",
-        "source_span",
-        "yaml"
+        "firebase_core_platform_interface",
+        "flutter",
+        "flutter_web_plugins",
+        "meta",
+        "web"
       ]
     },
     {
-      "name": "json_annotation",
-      "version": "4.12.0",
+      "name": "firebase_core_platform_interface",
+      "version": "6.0.3",
       "dependencies": [
+        "collection",
+        "flutter",
+        "flutter_test",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "firebase_messaging_platform_interface",
+      "version": "4.6.10",
+      "dependencies": [
+        "_flutterfire_internals",
+        "firebase_core",
+        "flutter",
+        "meta",
+        "plugin_platform_interface"
+      ]
+    },
+    {
+      "name": "_flutterfire_internals",
+      "version": "1.3.59",
+      "dependencies": [
+        "collection",
+        "firebase_core",
+        "firebase_core_platform_interface",
+        "flutter",
         "meta"
       ]
     }

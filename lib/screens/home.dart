@@ -80,11 +80,18 @@ class _HomeScreenState extends State<HomeScreen> {
 
     final danger  = _getDangerSensors();
     final warning = _getWarningSensors();
-    await NotificationService.showSensorNotification(
-      status: danger.isNotEmpty ? 'danger' : warning.isNotEmpty ? 'warning' : 'aman',
-      dangerSensors: danger,
-      warningSensors: warning,
-    );
+
+    if (danger.isNotEmpty) {
+      await NotificationService.showLocalNotification(
+        title: '⚠️ BAHAYA! Gas Berbahaya Terdeteksi',
+        body: 'Gas melebihi batas: ${danger.join(', ')}',
+      );
+    } else if (warning.isNotEmpty) {
+      await NotificationService.showLocalNotification(
+        title: '⚠️ Peringatan Gas',
+        body: 'Gas mendekati batas bahaya: ${warning.join(', ')}',
+      );
+    }
   }
 
   List<String> _getDangerSensors() {

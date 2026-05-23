@@ -14,13 +14,19 @@ import 'auth/auth_service.dart';
 import 'screens/forgot_token.dart';
 import 'screens/forgot_new.dart';
 import 'screens/for_newuser.dart';
-import '../services/notification_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
+import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
   // Load environment variables
   await dotenv.load(fileName: ".env");
+
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
 
   final url = dotenv.env['SUPABASE_URL'];
   final anonKey = dotenv.env['SUPABASE_ANON_KEY'];
@@ -33,6 +39,8 @@ Future<void> main() async {
     url: url,
     anonKey: anonKey,
   );
+
+  await NotificationService.initialize();
 
   // Initialize custom authentication session
   await AuthService.initializeSession();
@@ -94,7 +102,6 @@ class _AuthWrapperState extends State<AuthWrapper> {
   @override
   void initState() {
     super.initState();
-    NotificationService.init();
     _checkAuthStatus();
   }
 

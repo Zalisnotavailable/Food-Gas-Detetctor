@@ -1,56 +1,116 @@
-import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+// ─── Background message handler (harus top-level function) ───────────────────
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await NotificationService.showLocalNotification(
+    title: message.notification?.title ?? 'Gas Alert',
+    body:  message.notification?.body  ?? '',
+  );
+}
 
 class NotificationService {
-  static final _notifications = FlutterLocalNotificationsPlugin();
+  static final FlutterLocalNotificationsPlugin _localNotif =
+  FlutterLocalNotificationsPlugin();
 
-  static Future<void> init() async {
+  static const String _prefKey = 'notif_realtime_enabled';
+
+  // ─── Init (panggil di main.dart sebelum runApp) ───────────────────────────
+  static Future<void> initialize() async {
+    // Setup local notifications
     const android = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const settings = InitializationSettings(android: android);
-    await _notifications.initialize(settings);
+    const ios     = DarwinInitializationSettings();
+    await _localNotif.initialize(
+      const InitializationSettings(android: android, iOS: ios),
+    );
 
-    final androidPlugin = _notifications
-        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>();
-    await androidPlugin?.requestNotificationsPermission();
+    // Buat notification channel (Android)
+    await _localNotif
+        .resolvePlatformSpecificImplementation<
+        AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(
+      const AndroidNotificationChannel(
+        'gas_alert_channel',
+        'Gas Alerts',
+        description: 'Notifikasi peringatan gas berbahaya',
+        importance: Importance.max,
+        playSound: true,
+      ),
+    );
+
+    // Request permission
+    final messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission(alert: true, badge: true, sound: true);
+
+    // Subscribe ke topic FCM
+    await messaging.subscribeToTopic('gas_alerts');
+
+    // Handler saat app di background/terminated
+    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+    // Handler saat app di foreground
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      final enabled = await isEnabled();
+      if (!enabled) return; // toggle OFF → tidak tampilkan
+
+      await showLocalNotification(
+        title: message.notification?.title ?? 'Gas Alert',
+        body:  message.notification?.body  ?? '',
+      );
+    });
+
+    print('✅ NotificationService initialized');
   }
 
-  static Future<void> showSensorNotification({
-    required String status,
-    required List<String> dangerSensors,
-    required List<String> warningSensors,
+  // ─── Tampilkan notifikasi lokal ───────────────────────────────────────────
+  static Future<void> showLocalNotification({
+    required String title,
+    required String body,
   }) async {
-    String title;
-    String body;
-    Color notifColor;
+    final enabled = await isEnabled();
+    if (!enabled) return;
 
-    if (dangerSensors.isNotEmpty) {
-      title = '⚠️ BAHAYA! Gas Melewati Batas';
-      body = '${dangerSensors.join(', ')} dalam level berbahaya!';
-      notifColor = const Color(0xFFDC2626);
-    } else if (warningSensors.isNotEmpty) {
-      title = '⚡ Peringatan Sensor';
-      body = '${warningSensors.join(', ')} mendekati batas aman';
-      notifColor = const Color(0xFFF59E0B);
-    } else {
-      title = '✅ Semua Gas Aman';
-      body = 'Data sensor terbaru: semua dalam batas normal';
-      notifColor = const Color(0xFF00A39B);
-    }
-
-    final androidDetails = AndroidNotificationDetails(
-      'sensor_channel',
-      'Sensor Updates',
-      channelDescription: 'Notifikasi update data sensor gas',
-      importance: Importance.high,
-      priority: Priority.high,
-      color: notifColor,
-    );
-
-    await _notifications.show(
-      0,
+    await _localNotif.show(
+      DateTime.now().millisecondsSinceEpoch ~/ 1000,
       title,
       body,
-      NotificationDetails(android: androidDetails),
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          'gas_alert_channel',
+          'Gas Alerts',
+          channelDescription: 'Notifikasi peringatan gas berbahaya',
+          importance: Importance.max,
+          priority: Priority.high,
+          playSound: true,
+        ),
+        iOS: DarwinNotificationDetails(
+          presentAlert: true,
+          presentBadge: true,
+          presentSound: true,
+        ),
+      ),
     );
+  }
+
+  // ─── Toggle ON/OFF ────────────────────────────────────────────────────────
+  static Future<void> setEnabled(bool enabled) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_prefKey, enabled);
+
+    final messaging = FirebaseMessaging.instance;
+    if (enabled) {
+      await messaging.subscribeToTopic('gas_alerts');
+      print('🔔 Notifikasi diaktifkan');
+    } else {
+      await messaging.unsubscribeFromTopic('gas_alerts');
+      print('🔕 Notifikasi dimatikan');
+    }
+  }
+
+  static Future<bool> isEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_prefKey) ?? true; // default ON
   }
 }

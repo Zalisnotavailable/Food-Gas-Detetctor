@@ -875,7 +875,7 @@ class _AiSummaryCard extends StatelessWidget {
           const Row(children: [
             Icon(Icons.smart_toy, color: Colors.white),
             SizedBox(width: 8),
-            Text('AI Summary',
+            Text('Summary',
                 style: TextStyle(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
