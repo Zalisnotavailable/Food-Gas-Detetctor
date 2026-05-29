@@ -21,14 +21,14 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   void initState() {
     super.initState();
     _loadData();
-    refreshNotifier.addListener(_onGlobalRefresh); // ← tambah
+    refreshNotifier.addListener(_onGlobalRefresh);
   }
 
-  void _onGlobalRefresh() => _loadData(); // ← tambah
+  void _onGlobalRefresh() => _loadData();
 
   @override
   void dispose() {
-    refreshNotifier.removeListener(_onGlobalRefresh); // ← tambah
+    refreshNotifier.removeListener(_onGlobalRefresh);
     super.dispose();
   }
 
@@ -61,7 +61,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     });
   }
 
-  // Hitung distribusi status dari latest
   Map<String, double> _calcDistribution() {
     if (_latest == null) return {'Normal': 60, 'Warning': 30, 'Danger': 10};
     final sensors = {
@@ -84,7 +83,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     };
   }
 
-  // Hitung nilai radar dari latest (normalisasi 0-1)
   List<double> _calcRadarValues() {
     if (_latest == null) return [0.7, 0.6, 0.65, 0.55, 0.5, 0.6];
     double norm(String key, double? val) {
@@ -106,7 +104,6 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     ];
   }
 
-  // Heatmap: ambil nilai NH3 dari chartData (normalisasi per sel)
   List<double> _calcHeatmapValues() {
     if (_chartData.isEmpty) {
       return List.generate(72, (i) => (i % 5) / 4.0);
@@ -114,13 +111,11 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     final vals = _chartData.map((e) => e.nh3 ?? 0.0).toList();
     final maxVal = vals.reduce(math.max);
     if (maxVal == 0) return List.filled(vals.length, 0.0);
-    // Pad/trim to 72 cells
     final result = vals.map((v) => v / maxVal).toList();
     while (result.length < 72) result.add(0.0);
     return result.take(72).toList();
   }
 
-  // Konversi chartData ke FlSpot untuk trend
   List<FlSpot> _calcTrendSpots() {
     if (_chartData.isEmpty) {
       if (_selected == 0) {
@@ -139,17 +134,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
         ];
       }
     }
-
     return _chartData.asMap().entries.map((e) {
       final idx = e.key;
       final avg = e.value;
-      // Gunakan NH3 sebagai representasi utama, fallback ke 0
       final y = avg.nh3 ?? avg.h2s ?? avg.ch4 ?? avg.co2 ?? 0.0;
       double x;
       if (_selected == 0) {
         x = avg.time.hour.toDouble();
-      } else if (_selected == 1) {
-        x = (idx + 1).toDouble();
       } else {
         x = (idx + 1).toDouble();
       }
@@ -175,7 +166,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 
   double _systemUptime() {
-    if (_latest == null) return 98.5;
+    if (_latest == null) return 0;
     final sensors = [
       _latest!.nh3, _latest!.h2s, _latest!.ch4, _latest!.co2,
       _latest!.voc, _latest!.c2h5oh, _latest!.co, _latest!.h2,
@@ -184,285 +175,550 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     return online / sensors.length * 100;
   }
 
+  String _buildSummary() {
+    if (_latest == null) {
+      return 'Belum ada data sensor yang masuk. Pastikan perangkat terhubung dan mengirim data ke broker MQTT.';
+    }
+    final highSensors = <String>[];
+    final warnSensors = <String>[];
+    void check(String name, String key, double? val) {
+      final s = SensorService.getStatus(key, val);
+      if (s == 'Danger') highSensors.add('$name (${val?.toStringAsFixed(1)})');
+      if (s == 'Warning') warnSensors.add('$name (${val?.toStringAsFixed(1)})');
+    }
+    check('NH3', 'nh3', _latest!.nh3);
+    check('H2S', 'h2s', _latest!.h2s);
+    check('CH4', 'ch4', _latest!.ch4);
+    check('CO2', 'co2', _latest!.co2);
+    check('VOC', 'voc', _latest!.voc);
+    check('C2H5OH', 'c2h5oh', _latest!.c2h5oh);
+    check('CO', 'co', _latest!.co);
+    check('H2', 'h2', _latest!.h2);
+    final buf = StringBuffer();
+    if (highSensors.isEmpty && warnSensors.isEmpty) {
+      buf.write('Semua sensor dalam kondisi Normal. Tidak ada gas berbahaya yang terdeteksi saat ini.');
+    } else {
+      if (highSensors.isNotEmpty) buf.write('⚠️ BAHAYA: ${highSensors.join(', ')}. ');
+      if (warnSensors.isNotEmpty) buf.write('⚡ WARNING: ${warnSensors.join(', ')}. ');
+      buf.write('Segera periksa kondisi makanan dan ventilasi ruangan.');
+    }
+    return buf.toString();
+  }
+
+  String _fmt(double? v, {int decimals = 2}) =>
+      v != null ? v.toStringAsFixed(decimals) : '-';
+
   @override
   Widget build(BuildContext context) {
+    final cs = Theme.of(context).colorScheme;
     final distribution = _calcDistribution();
     final radarValues = _calcRadarValues();
     final heatmapValues = _calcHeatmapValues();
     final trendSpots = _calcTrendSpots();
     final trendLabels = _trendLabels();
+    final uptime = _systemUptime();
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF2F2F7),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _loadData,
-        backgroundColor: const Color(0xFF00A39B),
-        child: const Icon(Icons.refresh, color: Colors.white),
-      ),
-      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
-      body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _FixedHeaderDelegate(
-                height: 120,
-                child: _Header(
-                  onTabChanged: (i) => setState(() => _selected = i),
-                  selected: _selected,
+      backgroundColor: cs.surface,
+      body: NestedScrollView(
+        headerSliverBuilder: (_, __) => [
+          // ─── App Bar (sama pola dengan Home, Tray, Profile) ──────────
+          SliverAppBar(
+            expandedHeight: 140,
+            pinned: true,
+            backgroundColor: cs.primaryContainer,
+            flexibleSpace: FlexibleSpaceBar(
+              titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Analitik Sensor',
+                    style: TextStyle(
+                      color: cs.onPrimaryContainer,
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20,
+                    ),
+                  ),
+                  Text(
+                    'Deep Analytics Berbasis Data',
+                    style: TextStyle(
+                      color: cs.onPrimaryContainer.withOpacity(0.7),
+                      fontSize: 11,
+                    ),
+                  ),
+                ],
+              ),
+              background: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [cs.primary, cs.primaryContainer],
+                  ),
                 ),
               ),
             ),
+            actions: [
+              IconButton(
+                onPressed: _loadData,
+                icon: Icon(Icons.refresh_rounded, color: cs.onPrimary),
+                tooltip: 'Refresh',
+              ),
+            ],
+          ),
+        ],
+        body: _isLoading
+            ? Center(child: CircularProgressIndicator(color: cs.primary))
+            : CustomScrollView(
+          slivers: [
+            // ─── Tab Filter ──────────────────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 6),
-                child: _TabsBar(
-                  selected: _selected,
-                  onSelected: _onTabChanged,
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _filterChip(context, 0, 'Hari Ini'),
+                      const SizedBox(width: 8),
+                      _filterChip(context, 1, 'Minggu'),
+                      const SizedBox(width: 8),
+                      _filterChip(context, 2, 'Bulan'),
+                    ],
+                  ),
                 ),
               ),
             ),
-            SliverList(
-              delegate: SliverChildListDelegate([
-                const SizedBox(height: 12),
-                _StatusCard(percentage: _systemUptime()),
-                const SizedBox(height: 12),
-                _AnalyticsCard(
-                  title: _selected == 0
-                      ? 'Heatmap Aktivitas Gas (24 Jam)'
-                      : _selected == 1
-                      ? 'Heatmap Aktivitas Gas (7 Hari)'
-                      : 'Heatmap Aktivitas Gas (30 Hari)',
-                  child: _HeatmapWidget(values: heatmapValues),
-                  height: 200,
-                ),
-                const SizedBox(height: 12),
-                _AnalyticsCard(
-                  title: 'Distribusi Status Sensor',
-                  child: _DonutWidget(distribution: distribution),
-                  height: 260,
-                ),
-                const SizedBox(height: 12),
-                _AnalyticsCard(
-                  title: 'Radar Profil Gas',
-                  child: _RadarWidget(values: radarValues),
-                  height: 240,
-                ),
-                const SizedBox(height: 12),
-                _AnalyticsCard(
-                  title: _selected == 0
-                      ? 'Trend 24 Jam'
-                      : _selected == 1
-                      ? 'Trend 7 Hari'
-                      : 'Trend 30 Hari',
-                  child: _TrendChart(
-                    mode: _selected,
-                    spots: trendSpots,
-                    labels: trendLabels,
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ─── Status Sistem Card ──────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Card(
+                  elevation: 0,
+                  color: cs.surfaceContainerLow,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(children: [
+                      Icon(Icons.monitor_heart_outlined,
+                          color: cs.primary, size: 28),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Status Sistem',
+                                  style: TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 15,
+                                      color: cs.onSurface)),
+                              const SizedBox(height: 2),
+                              Text(
+                                  '${_latest == null ? 0 : 9} sensor online',
+                                  style: TextStyle(
+                                      color: cs.onSurfaceVariant,
+                                      fontSize: 12)),
+                            ]),
+                      ),
+                      Text(
+                        '${uptime.toStringAsFixed(0)}%',
+                        style: TextStyle(
+                            color: cs.primary,
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800),
+                      ),
+                    ]),
                   ),
-                  height: 240,
                 ),
-                const SizedBox(height: 12),
-                _AllSensorsCard(latest: _latest),
-                const SizedBox(height: 12),
-                _AiSummaryCard(latest: _latest, distribution: distribution),
-                const SizedBox(height: 80),
-              ]),
+              ),
             ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ─── Heatmap Card ─────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _AnalyticsCard(
+                title: _selected == 0
+                    ? 'Heatmap Aktivitas Gas (24 Jam)'
+                    : _selected == 1
+                    ? 'Heatmap Aktivitas Gas (7 Hari)'
+                    : 'Heatmap Aktivitas Gas (30 Hari)',
+                icon: Icons.grid_view_rounded,
+                cs: cs,
+                height: 200,
+                child: _HeatmapWidget(values: heatmapValues, cs: cs),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ─── Donut Card ───────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _AnalyticsCard(
+                title: 'Distribusi Status Sensor',
+                icon: Icons.donut_large_rounded,
+                cs: cs,
+                height: 260,
+                child: _DonutWidget(distribution: distribution, cs: cs),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ─── Radar Card ───────────────────────────────────────
+            SliverToBoxAdapter(
+              child: _AnalyticsCard(
+                title: 'Radar Profil Gas',
+                icon: Icons.radar_rounded,
+                cs: cs,
+                height: 240,
+                child: _RadarWidget(values: radarValues, cs: cs),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ─── Trend Chart Card ─────────────────────────────────
+            SliverToBoxAdapter(
+              child: _AnalyticsCard(
+                title: _selected == 0
+                    ? 'Trend 24 Jam'
+                    : _selected == 1
+                    ? 'Trend 7 Hari'
+                    : 'Trend 30 Hari',
+                icon: Icons.show_chart_rounded,
+                cs: cs,
+                height: 240,
+                child: _TrendChart(
+                  mode: _selected,
+                  spots: trendSpots,
+                  labels: trendLabels,
+                  cs: cs,
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ─── All Sensors Card ─────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Card(
+                  elevation: 0,
+                  color: cs.surfaceContainerLow,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Icon(Icons.sensors_rounded,
+                                color: cs.primary),
+                            const SizedBox(width: 8),
+                            Text('Semua Sensor',
+                                style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15,
+                                    color: cs.onSurface)),
+                          ]),
+                          const SizedBox(height: 12),
+                          GridView.builder(
+                            shrinkWrap: true,
+                            physics:
+                            const NeverScrollableScrollPhysics(),
+                            gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              mainAxisSpacing: 10,
+                              crossAxisSpacing: 10,
+                              childAspectRatio: 1.6,
+                            ),
+                            itemCount: 9,
+                            itemBuilder: (_, i) {
+                              final entries = [
+                                ('NH3', 'nh3', _latest?.nh3, 'MQ-137', 'ppm'),
+                                ('H2S', 'h2s', _latest?.h2s, 'MQ-136', 'ppm'),
+                                ('CH4', 'ch4', _latest?.ch4, 'MQ-4', 'ppm'),
+                                ('CO2', 'co2', _latest?.co2, 'MQ-135', 'ppm'),
+                                ('VOC', 'voc', _latest?.voc, 'MQ-135', 'mg/m³'),
+                                ('C2H5OH', 'c2h5oh', _latest?.c2h5oh, 'MQ-3', 'ppm'),
+                                ('CO', 'co', _latest?.co, 'MQ-7', 'ppm'),
+                                ('Acetone', 'acetone', _latest?.acetone, 'MQ-138', 'ppm'),
+                                ('H2', 'h2', _latest?.h2, 'MQ-8', 'ppm'),
+                              ];
+                              final (title, key, val, sensor, unit) =
+                              entries[i];
+                              final status = key == 'acetone'
+                                  ? 'Normal'
+                                  : SensorService.getStatus(key, val);
+                              final isDanger = status == 'Danger';
+                              final isWarning = status == 'Warning';
+                              final tileColor = isDanger
+                                  ? cs.errorContainer
+                                  : isWarning
+                                  ? const Color(0xFFFFF8E1)
+                                  : cs.surfaceContainerHighest;
+                              final dotColor = isDanger
+                                  ? cs.error
+                                  : isWarning
+                                  ? Colors.orange
+                                  : cs.primary;
+                              return Card(
+                                elevation: 0,
+                                color: tileColor,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius:
+                                    BorderRadius.circular(14)),
+                                child: Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 10),
+                                  child: Column(
+                                      crossAxisAlignment:
+                                      CrossAxisAlignment.start,
+                                      children: [
+                                        Row(children: [
+                                          Text(title,
+                                              style: TextStyle(
+                                                  fontWeight:
+                                                  FontWeight.w600,
+                                                  color: cs.onSurface,
+                                                  fontSize: 13)),
+                                          const Spacer(),
+                                          Icon(Icons.circle,
+                                              size: 8,
+                                              color: dotColor),
+                                        ]),
+                                        const SizedBox(height: 6),
+                                        Row(
+                                            crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                            children: [
+                                              Text(
+                                                  _fmt(val,
+                                                      decimals: 1),
+                                                  style: TextStyle(
+                                                      fontWeight:
+                                                      FontWeight
+                                                          .w800,
+                                                      fontSize: 20,
+                                                      color:
+                                                      cs.onSurface)),
+                                              const SizedBox(width: 3),
+                                              Padding(
+                                                padding:
+                                                const EdgeInsets.only(
+                                                    bottom: 2),
+                                                child: Text(unit,
+                                                    style: TextStyle(
+                                                        fontSize: 10,
+                                                        color: cs
+                                                            .onSurfaceVariant)),
+                                              ),
+                                            ]),
+                                        Text('$sensor • $status',
+                                            style: TextStyle(
+                                                color:
+                                                cs.onSurfaceVariant,
+                                                fontSize: 11)),
+                                      ]),
+                                ),
+                              );
+                            },
+                          ),
+                        ]),
+                  ),
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ─── AI Summary Card ──────────────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Card(
+                  elevation: 0,
+                  color: cs.secondaryContainer,
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16)),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(children: [
+                            Icon(Icons.smart_toy_outlined,
+                                color: cs.onSecondaryContainer),
+                            const SizedBox(width: 8),
+                            Text('Summary',
+                                style: TextStyle(
+                                    color: cs.onSecondaryContainer,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 15)),
+                          ]),
+                          const SizedBox(height: 10),
+                          Text(
+                            _buildSummary(),
+                            style: TextStyle(
+                                color: cs.onSecondaryContainer,
+                                height: 1.5),
+                          ),
+                          const SizedBox(height: 14),
+                          GridView.count(
+                            shrinkWrap: true,
+                            physics:
+                            const NeverScrollableScrollPhysics(),
+                            crossAxisCount: 2,
+                            childAspectRatio: 2.4,
+                            crossAxisSpacing: 10,
+                            mainAxisSpacing: 10,
+                            children: [
+                              _SummaryStatTile(
+                                  value: _latest == null ? '0' : '9',
+                                  label: 'Sensor Online',
+                                  cs: cs),
+                              _SummaryStatTile(
+                                  value:
+                                  '${(distribution['Danger'] ?? 0).toStringAsFixed(0)}%',
+                                  label: 'Bahaya',
+                                  cs: cs),
+                              _SummaryStatTile(
+                                  value:
+                                  '${(distribution['Warning'] ?? 0).toStringAsFixed(0)}%',
+                                  label: 'Warning',
+                                  cs: cs),
+                              _SummaryStatTile(
+                                  value:
+                                  '${(distribution['Normal'] ?? 0).toStringAsFixed(0)}%',
+                                  label: 'Normal',
+                                  cs: cs),
+                            ],
+                          ),
+                        ]),
+                  ),
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 80)),
           ],
         ),
       ),
     );
   }
-}
 
-// ─── Header & Tabs ────────────────────────────────────────────────────────────
-
-class _FixedHeaderDelegate extends SliverPersistentHeaderDelegate {
-  _FixedHeaderDelegate({required this.child, required this.height});
-  final Widget child;
-  final double height;
-
-  @override double get minExtent => height;
-  @override double get maxExtent => height;
-
-  @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) =>
-      SizedBox.expand(child: child);
-
-  @override
-  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) => false;
-}
-
-class _Header extends StatelessWidget {
-  const _Header({required this.onTabChanged, required this.selected});
-  final ValueChanged<int> onTabChanged;
-  final int selected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [Color(0xFF00B4DB), Color(0xFF00A39B)],
-        ),
-      ),
-      padding: const EdgeInsets.fromLTRB(16, 24, 16, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Analitik Sensor',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white, fontWeight: FontWeight.w800)),
-          const SizedBox(height: 4),
-          Text('Deep Analytics Berbasis Data',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(color: Colors.white70)),
-        ],
+  Widget _filterChip(BuildContext context, int index, String label) {
+    final cs = Theme.of(context).colorScheme;
+    final selected = _selected == index;
+    return FilterChip(
+      label: Text(label),
+      selected: selected,
+      onSelected: (_) => _onTabChanged(index),
+      selectedColor: cs.primaryContainer,
+      checkmarkColor: cs.primary,
+      labelStyle: TextStyle(
+        color: selected ? cs.primary : cs.onSurfaceVariant,
+        fontWeight: selected ? FontWeight.w700 : FontWeight.normal,
       ),
     );
   }
 }
 
-class _TabsBar extends StatelessWidget {
-  const _TabsBar({required this.selected, required this.onSelected});
-  final int selected;
-  final ValueChanged<int> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: const [
-            BoxShadow(color: Color(0x11000000), blurRadius: 10, offset: Offset(0, 4))
-          ]),
-      padding: const EdgeInsets.all(6),
-      child: Row(
-        children: [
-          _TabButton(label: 'Hari Ini', selected: selected == 0, onTap: () => onSelected(0)),
-          _TabButton(label: 'Minggu',   selected: selected == 1, onTap: () => onSelected(1)),
-          _TabButton(label: 'Bulan',    selected: selected == 2, onTap: () => onSelected(2)),
-        ],
-      ),
-    );
-  }
-}
-
-class _TabButton extends StatelessWidget {
-  const _TabButton({required this.label, required this.selected, required this.onTap});
-  final String label;
-  final bool selected;
-  final VoidCallback onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 180),
-        curve: Curves.easeOut,
-        height: 44,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        decoration: BoxDecoration(
-          color: selected ? const Color(0xFF10B981) : Colors.white,
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(10),
-            onTap: onTap,
-            child: Center(
-              child: Text(label,
-                  style: TextStyle(
-                      color: selected ? Colors.white : Colors.black87,
-                      fontWeight: FontWeight.w700)),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─── Cards ────────────────────────────────────────────────────────────────────
-
-class _StatusCard extends StatelessWidget {
-  const _StatusCard({required this.percentage});
-  final double percentage;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Container(
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(color: Color(0x11000000), blurRadius: 10, offset: Offset(0, 4))
-            ]),
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          children: [
-            const Expanded(
-                child: Text('Status Sistem',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                        color: Colors.black87))),
-            Text('${percentage.toStringAsFixed(1)}%',
-                style: const TextStyle(
-                    color: Color(0xFF0284C7),
-                    fontSize: 20,
-                    fontWeight: FontWeight.w800)),
-          ],
-        ),
-      ),
-    );
-  }
-}
+// ─── Analytics Card (M3 style) ────────────────────────────────────────────────
 
 class _AnalyticsCard extends StatelessWidget {
-  const _AnalyticsCard({required this.title, required this.child, this.height = 180});
+  const _AnalyticsCard({
+    required this.title,
+    required this.icon,
+    required this.cs,
+    required this.child,
+    this.height = 200,
+  });
   final String title;
+  final IconData icon;
+  final ColorScheme cs;
   final Widget child;
   final double height;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Container(
-        decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: const [
-              BoxShadow(color: Color(0x11000000), blurRadius: 10, offset: Offset(0, 4))
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Card(
+        elevation: 0,
+        color: cs.surfaceContainerLow,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+            Row(children: [
+              Icon(icon, color: cs.primary, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                title,
+                style: TextStyle(
+                  fontWeight: FontWeight.w700,
+                  fontSize: 15,
+                  color: cs.onSurface,
+                ),
+              ),
             ]),
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Text(title,
-              style: const TextStyle(
-                  fontWeight: FontWeight.w800, fontSize: 16, color: Colors.black87)),
-          const SizedBox(height: 12),
-          SizedBox(height: height, child: child),
-        ]),
+            const SizedBox(height: 12),
+            SizedBox(height: height, child: child),
+          ]),
+        ),
       ),
     );
   }
 }
 
-// ─── Heatmap (data real) ──────────────────────────────────────────────────────
+// ─── Summary Stat Tile ────────────────────────────────────────────────────────
+
+class _SummaryStatTile extends StatelessWidget {
+  const _SummaryStatTile(
+      {required this.value, required this.label, required this.cs});
+  final String value, label;
+  final ColorScheme cs;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: cs.secondary.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Text(value,
+            style: TextStyle(
+                color: cs.onSecondaryContainer,
+                fontWeight: FontWeight.w800,
+                fontSize: 18)),
+        const SizedBox(height: 2),
+        Text(label,
+            style:
+            TextStyle(color: cs.onSecondaryContainer.withOpacity(0.7), fontSize: 12)),
+      ]),
+    );
+  }
+}
+
+// ─── Heatmap ──────────────────────────────────────────────────────────────────
 
 class _HeatmapWidget extends StatelessWidget {
-  const _HeatmapWidget({required this.values});
+  const _HeatmapWidget({required this.values, required this.cs});
   final List<double> values;
+  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
@@ -473,10 +729,9 @@ class _HeatmapWidget extends StatelessWidget {
       itemCount: values.length,
       itemBuilder: (_, i) {
         final v = values[i].clamp(0.0, 1.0);
-        // Interpolasi warna: hijau muda → hijau tua (aman → tinggi)
         final color = Color.lerp(
-          const Color(0xFFE0F2F1),
-          const Color(0xFF00796B),
+          cs.primaryContainer,
+          cs.primary,
           v,
         )!;
         return Container(
@@ -490,11 +745,12 @@ class _HeatmapWidget extends StatelessWidget {
   }
 }
 
-// ─── Donut (data real) ────────────────────────────────────────────────────────
+// ─── Donut ────────────────────────────────────────────────────────────────────
 
 class _DonutWidget extends StatelessWidget {
-  const _DonutWidget({required this.distribution});
+  const _DonutWidget({required this.distribution, required this.cs});
   final Map<String, double> distribution;
+  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
@@ -502,31 +758,38 @@ class _DonutWidget extends StatelessWidget {
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
         SizedBox(
-          width: 180,
-          height: 180,
+          width: 160,
+          height: 160,
           child: CustomPaint(
             painter: _DonutPainter(
               normal: distribution['Normal'] ?? 60,
               warning: distribution['Warning'] ?? 30,
               danger: distribution['Danger'] ?? 10,
+              normalColor: cs.tertiary,
+              warningColor: Colors.orange,
+              dangerColor: cs.error,
+              bgColor: cs.surfaceContainerHighest,
             ),
           ),
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         Wrap(
           alignment: WrapAlignment.center,
           spacing: 16,
           runSpacing: 8,
           children: [
             _Legend(
-                color: const Color(0xFF10B981),
-                label: 'Aman (${(distribution['Normal'] ?? 0).toStringAsFixed(0)}%)'),
+                color: cs.tertiary,
+                label: 'Aman (${(distribution['Normal'] ?? 0).toStringAsFixed(0)}%)',
+                cs: cs),
             _Legend(
-                color: const Color(0xFFF59E0B),
-                label: 'Warning (${(distribution['Warning'] ?? 0).toStringAsFixed(0)}%)'),
+                color: Colors.orange,
+                label: 'Warning (${(distribution['Warning'] ?? 0).toStringAsFixed(0)}%)',
+                cs: cs),
             _Legend(
-                color: const Color(0xFFEF4444),
-                label: 'Bahaya (${(distribution['Danger'] ?? 0).toStringAsFixed(0)}%)'),
+                color: cs.error,
+                label: 'Bahaya (${(distribution['Danger'] ?? 0).toStringAsFixed(0)}%)',
+                cs: cs),
           ],
         ),
       ],
@@ -535,8 +798,17 @@ class _DonutWidget extends StatelessWidget {
 }
 
 class _DonutPainter extends CustomPainter {
-  const _DonutPainter({required this.normal, required this.warning, required this.danger});
+  const _DonutPainter({
+    required this.normal,
+    required this.warning,
+    required this.danger,
+    required this.normalColor,
+    required this.warningColor,
+    required this.dangerColor,
+    required this.bgColor,
+  });
   final double normal, warning, danger;
+  final Color normalColor, warningColor, dangerColor, bgColor;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -547,7 +819,7 @@ class _DonutPainter extends CustomPainter {
     final bg = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = stroke
-      ..color = const Color(0xFFE5E7EB);
+      ..color = bgColor;
     canvas.drawCircle(center, radius, bg);
 
     void drawArc(double start, double sweep, Color color) {
@@ -569,13 +841,11 @@ class _DonutPainter extends CustomPainter {
     final redSweep    = danger  / total * math.pi * 2;
 
     double start = -math.pi / 2;
-    drawArc(start, greenSweep,  const Color(0xFF10B981));
+    drawArc(start, greenSweep, normalColor);
     start += greenSweep + 0.05;
-    drawArc(start, yellowSweep, const Color(0xFFF59E0B));
+    drawArc(start, yellowSweep, warningColor);
     start += yellowSweep + 0.05;
-    drawArc(start, redSweep,    const Color(0xFFEF4444));
-
-    canvas.drawCircle(center, radius - stroke, Paint()..color = Colors.white);
+    drawArc(start, redSweep, dangerColor);
   }
 
   @override
@@ -584,54 +854,56 @@ class _DonutPainter extends CustomPainter {
 }
 
 class _Legend extends StatelessWidget {
-  const _Legend({required this.color, required this.label});
+  const _Legend({required this.color, required this.label, required this.cs});
   final Color color;
   final String label;
+  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-            width: 10,
-            height: 10,
-            decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: Colors.black87)),
-      ],
-    );
+    return Row(mainAxisSize: MainAxisSize.min, children: [
+      Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle)),
+      const SizedBox(width: 6),
+      Text(label, style: TextStyle(color: cs.onSurface, fontSize: 13)),
+    ]);
   }
 }
 
-// ─── Radar (data real) ────────────────────────────────────────────────────────
+// ─── Radar ────────────────────────────────────────────────────────────────────
 
 class _RadarWidget extends StatelessWidget {
-  const _RadarWidget({required this.values});
+  const _RadarWidget({required this.values, required this.cs});
   final List<double> values;
+  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
     const labels = ['NH3', 'H2S', 'CH4', 'C2H5OH', 'VOC', 'CO2'];
-    // Pastikan panjang values = 6
-    final safeValues = List<double>.generate(
-        6, (i) => i < values.length ? values[i] : 0.0);
+    final safeValues =
+    List<double>.generate(6, (i) => i < values.length ? values[i] : 0.0);
 
     return RadarChart(
       RadarChartData(
         radarShape: RadarShape.polygon,
         tickCount: 3,
-        ticksTextStyle: const TextStyle(color: Colors.black38, fontSize: 10),
-        gridBorderData: const BorderSide(color: Color(0xFFE5E7EB)),
+        ticksTextStyle:
+        TextStyle(color: cs.onSurfaceVariant, fontSize: 10),
+        gridBorderData:
+        BorderSide(color: cs.outlineVariant),
         titlePositionPercentageOffset: 0.15,
-        getTitle: (index, angle) => RadarChartTitle(text: labels[index]),
+        getTitle: (index, angle) =>
+            RadarChartTitle(text: labels[index]),
         dataSets: [
           RadarDataSet(
-            fillColor: const Color(0xFF60A5FA).withOpacity(0.35),
-            borderColor: const Color(0xFF3B82F6),
+            fillColor: cs.primary.withOpacity(0.2),
+            borderColor: cs.primary,
             entryRadius: 2,
             borderWidth: 2,
-            dataEntries: safeValues.map((v) => RadarEntry(value: v)).toList(),
+            dataEntries:
+            safeValues.map((v) => RadarEntry(value: v)).toList(),
           ),
         ],
       ),
@@ -640,18 +912,26 @@ class _RadarWidget extends StatelessWidget {
   }
 }
 
-// ─── Trend Chart (data real) ──────────────────────────────────────────────────
+// ─── Trend Chart ──────────────────────────────────────────────────────────────
 
 class _TrendChart extends StatelessWidget {
-  const _TrendChart({required this.mode, required this.spots, required this.labels});
+  const _TrendChart({
+    required this.mode,
+    required this.spots,
+    required this.labels,
+    required this.cs,
+  });
   final int mode;
   final List<FlSpot> spots;
   final List<String> labels;
+  final ColorScheme cs;
 
   @override
   Widget build(BuildContext context) {
     if (spots.isEmpty) {
-      return const Center(child: Text('Belum ada data', style: TextStyle(color: Colors.black38)));
+      return Center(
+          child: Text('Belum ada data',
+              style: TextStyle(color: cs.onSurfaceVariant)));
     }
 
     final xs = spots.map((s) => s.x).toList();
@@ -671,261 +951,77 @@ class _TrendChart extends StatelessWidget {
           show: true,
           horizontalInterval: maxY > 0 ? maxY / 4 : 25,
           drawVerticalLine: false,
+          getDrawingHorizontalLine: (_) =>
+              FlLine(color: cs.outlineVariant, strokeWidth: 1),
         ),
         titlesData: FlTitlesData(
           leftTitles: AxisTitles(
             axisNameWidget: Text(
-              mode == 2 ? 'Total Insiden' : 'Konsentrasi Gas (ppm)',
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              mode == 2 ? 'Total Insiden' : 'Konsentrasi (ppm)',
+              style: TextStyle(fontSize: 11, color: cs.onSurfaceVariant),
             ),
             axisNameSize: 22,
-            sideTitles: SideTitles(showTitles: true, reservedSize: 36),
+            sideTitles: SideTitles(
+              showTitles: true,
+              reservedSize: 36,
+              getTitlesWidget: (v, _) => Text(
+                v.toStringAsFixed(0),
+                style: TextStyle(fontSize: 10, color: cs.onSurfaceVariant),
+              ),
+            ),
           ),
           bottomTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
               interval: interval,
               getTitlesWidget: (value, meta) {
-                final idx = xs.indexWhere((x) => (x - value).abs() < 0.5);
-                if (idx == -1 || idx >= labels.length) return const SizedBox.shrink();
+                final idx =
+                xs.indexWhere((x) => (x - value).abs() < 0.5);
+                if (idx == -1 || idx >= labels.length) {
+                  return const SizedBox.shrink();
+                }
                 return Text(labels[idx],
-                    style: const TextStyle(fontSize: 11, color: Colors.black45));
+                    style: TextStyle(
+                        fontSize: 11, color: cs.onSurfaceVariant));
               },
             ),
           ),
-          topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+          AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+          AxisTitles(sideTitles: SideTitles(showTitles: false)),
         ),
         borderData: FlBorderData(show: false),
         lineBarsData: [
           LineChartBarData(
             spots: spots,
             isCurved: true,
-            gradient: const LinearGradient(
-                colors: [Color(0xFF10B981), Color(0xFF0284C7)]),
+            gradient: LinearGradient(
+                colors: [cs.primary, cs.tertiary]),
             barWidth: 3,
             dotData: FlDotData(
               show: true,
-              getDotPainter: (spot, percent, bar, index) => FlDotCirclePainter(
-                radius: 3,
-                color: const Color(0xFF10B981),
-                strokeWidth: 0,
+              getDotPainter: (spot, percent, bar, index) =>
+                  FlDotCirclePainter(
+                    radius: 3,
+                    color: cs.primary,
+                    strokeWidth: 0,
+                  ),
+            ),
+            belowBarData: BarAreaData(
+              show: true,
+              gradient: LinearGradient(
+                colors: [
+                  cs.primary.withOpacity(0.15),
+                  cs.primary.withOpacity(0.0),
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
               ),
             ),
           ),
         ],
       ),
-    );
-  }
-}
-
-// ─── All Sensors Card ─────────────────────────────────────────────────────────
-
-class _AllSensorsCard extends StatelessWidget {
-  const _AllSensorsCard({this.latest});
-  final SensorReading? latest;
-
-  static Color _statusColor(String status) {
-    if (status == 'Danger') return const Color(0xFFEF4444);
-    if (status == 'Warning') return const Color(0xFFF59E0B);
-    return Colors.green;
-  }
-
-  static Widget _sensor(String title, String value, String note, Color dotColor) {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFFF8FAFC),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      padding: const EdgeInsets.all(12),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(children: [
-          Text(title,
-              style: const TextStyle(color: Colors.black87, fontWeight: FontWeight.w700)),
-          const Spacer(),
-          Icon(Icons.circle, size: 8, color: dotColor),
-        ]),
-        const SizedBox(height: 6),
-        Text(value,
-            style: const TextStyle(
-                color: Color(0xFF0284C7), fontSize: 16, fontWeight: FontWeight.w800)),
-        const SizedBox(height: 4),
-        Text(note, style: const TextStyle(color: Colors.black45, fontSize: 11)),
-      ]),
-    );
-  }
-
-  String _fmt(double? v, {int decimals = 2}) =>
-      v != null ? v.toStringAsFixed(decimals) : '-';
-
-  @override
-  Widget build(BuildContext context) {
-    final tiles = [
-      _sensor('NH3',     '${_fmt(latest?.nh3)} ppm',     'MQ-137 • ${SensorService.getStatus('nh3', latest?.nh3)}',      _statusColor(SensorService.getStatus('nh3', latest?.nh3))),
-      _sensor('H2S',     '${_fmt(latest?.h2s)} ppm',     'MQ-136 • ${SensorService.getStatus('h2s', latest?.h2s)}',      _statusColor(SensorService.getStatus('h2s', latest?.h2s))),
-      _sensor('CH4',     '${_fmt(latest?.ch4)} ppm',     'MQ-4 • ${SensorService.getStatus('ch4', latest?.ch4)}',        _statusColor(SensorService.getStatus('ch4', latest?.ch4))),
-      _sensor('CO2',     '${_fmt(latest?.co2)} ppm',     'MQ-135 • ${SensorService.getStatus('co2', latest?.co2)}',      _statusColor(SensorService.getStatus('co2', latest?.co2))),
-      _sensor('VOC',     '${_fmt(latest?.voc)} mg/m³',   'MQ-135 • ${SensorService.getStatus('voc', latest?.voc)}',      _statusColor(SensorService.getStatus('voc', latest?.voc))),
-      _sensor('C2H5OH',  '${_fmt(latest?.c2h5oh)} ppm',  'MQ-3 • ${SensorService.getStatus('c2h5oh', latest?.c2h5oh)}',  _statusColor(SensorService.getStatus('c2h5oh', latest?.c2h5oh))),
-      _sensor('CO',      '${_fmt(latest?.co)} ppm',      'MQ-7 • ${SensorService.getStatus('co', latest?.co)}',          _statusColor(SensorService.getStatus('co', latest?.co))),
-      _sensor('Acetone', '${_fmt(latest?.acetone)} ppm', 'MQ-138 • Normal',                                               Colors.green),
-      _sensor('H2',      '${_fmt(latest?.h2)} ppm',      'MQ-8 • ${SensorService.getStatus('h2', latest?.h2)}',          _statusColor(SensorService.getStatus('h2', latest?.h2))),
-    ];
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(16),
-          boxShadow: const [
-            BoxShadow(color: Color(0x11000000), blurRadius: 10, offset: Offset(0, 4))
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Text('Semua Sensor',
-              style: TextStyle(
-                  fontWeight: FontWeight.w800, fontSize: 16, color: Colors.black87)),
-          const SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 2,
-              mainAxisSpacing: 12,
-              crossAxisSpacing: 12,
-              childAspectRatio: 1.6,
-            ),
-            itemCount: tiles.length,
-            itemBuilder: (_, i) => tiles[i],
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
-// ─── AI Summary Card (data real) ─────────────────────────────────────────────
-
-class _AiSummaryCard extends StatelessWidget {
-  const _AiSummaryCard({this.latest, required this.distribution});
-  final SensorReading? latest;
-  final Map<String, double> distribution;
-
-  String _buildSummary() {
-    if (latest == null) {
-      return 'Belum ada data sensor yang masuk. Pastikan perangkat terhubung dan mengirim data ke broker MQTT.';
-    }
-
-    final highSensors = <String>[];
-    final warnSensors = <String>[];
-
-    void check(String name, String key, double? val) {
-      final s = SensorService.getStatus(key, val);
-      if (s == 'Danger') highSensors.add('$name (${val?.toStringAsFixed(1)})');
-      if (s == 'Warning') warnSensors.add('$name (${val?.toStringAsFixed(1)})');
-    }
-
-    check('NH3', 'nh3', latest!.nh3);
-    check('H2S', 'h2s', latest!.h2s);
-    check('CH4', 'ch4', latest!.ch4);
-    check('CO2', 'co2', latest!.co2);
-    check('VOC', 'voc', latest!.voc);
-    check('C2H5OH', 'c2h5oh', latest!.c2h5oh);
-    check('CO', 'co', latest!.co);
-    check('H2', 'h2', latest!.h2);
-
-    final buf = StringBuffer();
-    if (highSensors.isEmpty && warnSensors.isEmpty) {
-      buf.write('Semua sensor dalam kondisi Normal. Tidak ada gas berbahaya yang terdeteksi saat ini.');
-    } else {
-      if (highSensors.isNotEmpty) {
-        buf.write('⚠️ Sensor dalam kondisi BAHAYA: ${highSensors.join(', ')}. ');
-      }
-      if (warnSensors.isNotEmpty) {
-        buf.write('⚡ Sensor dalam kondisi WARNING: ${warnSensors.join(', ')}. ');
-      }
-      buf.write('Segera periksa kondisi makanan dan ventilasi ruangan.');
-    }
-    return buf.toString();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dangerPct = (distribution['Danger'] ?? 0).toStringAsFixed(0);
-    final warnPct   = (distribution['Warning'] ?? 0).toStringAsFixed(0);
-    final normalPct = (distribution['Normal'] ?? 0).toStringAsFixed(0);
-    final onlineSensors = latest == null ? '0' : '9';
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Container(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-              colors: [Color(0xFF38BDF8), Color(0xFF10B981)]),
-          borderRadius: BorderRadius.circular(18),
-          boxShadow: const [
-            BoxShadow(color: Color(0x22000000), blurRadius: 16, offset: Offset(0, 8))
-          ],
-        ),
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          const Row(children: [
-            Icon(Icons.smart_toy, color: Colors.white),
-            SizedBox(width: 8),
-            Text('Summary',
-                style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w800,
-                    fontSize: 16)),
-          ]),
-          const SizedBox(height: 8),
-          Text(
-            _buildSummary(),
-            style: const TextStyle(color: Colors.white, height: 1.4),
-          ),
-          const SizedBox(height: 14),
-          GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: 2,
-            childAspectRatio: 2.2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            children: [
-              _AiStat(value: onlineSensors, label: 'Sensor Online'),
-              _AiStat(value: '$dangerPct%', label: 'Bahaya'),
-              _AiStat(value: '$warnPct%',   label: 'Warning'),
-              _AiStat(value: '$normalPct%', label: 'Normal'),
-            ],
-          ),
-        ]),
-      ),
-    );
-  }
-}
-
-class _AiStat extends StatelessWidget {
-  const _AiStat({required this.value, required this.label});
-  final String value;
-  final String label;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-          color: Colors.white.withOpacity(0.18),
-          borderRadius: BorderRadius.circular(14)),
-      padding: const EdgeInsets.all(10),
-      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(value,
-            style: const TextStyle(
-                color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
-        const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 12)),
-      ]),
     );
   }
 }

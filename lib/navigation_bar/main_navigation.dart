@@ -1,13 +1,11 @@
 import 'package:flutter/material.dart';
 import '../screens/home.dart';
 import '../screens/analysis_screen.dart';
-import '../screens/scan_screen.dart';
 import '../screens/tray.dart';
 import '../screens/profile.dart';
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});
-
   static const String routeName = '/main';
 
   @override
@@ -20,50 +18,37 @@ class _MainNavigationState extends State<MainNavigation> {
   final List<Widget> _pages = const [
     HomeScreen(),
     AnalysisScreen(),
-    ScanScreen(),
-     TrayPage(),
+    TrayPage(),
     ProfilePage(),
   ];
 
   @override
   Widget build(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _pages,
-      ),
+      body: IndexedStack(index: _currentIndex, children: _pages),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
-        onDestinationSelected: (index) => setState(() => _currentIndex = index),
-        backgroundColor: const Color(0xFF111315),
-        indicatorColor: colorScheme.primary.withOpacity(0.15),
-        surfaceTintColor: Colors.transparent,
+        onDestinationSelected: (i) => setState(() => _currentIndex = i),
         destinations: const [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined, color: Colors.white70),
-            selectedIcon: Icon(Icons.home_rounded, color: Colors.white),
+            icon: Icon(Icons.home_outlined),
+            selectedIcon: Icon(Icons.home_rounded),
             label: 'Home',
           ),
           NavigationDestination(
-            icon: Icon(Icons.search_outlined, color: Colors.white70),
-            selectedIcon: Icon(Icons.search_rounded, color: Colors.white),
+            icon: Icon(Icons.analytics_outlined),
+            selectedIcon: Icon(Icons.analytics_rounded),
             label: 'Analisis',
           ),
           NavigationDestination(
-            icon: Icon(Icons.qr_code_scanner_outlined, color: Colors.white70),
-            selectedIcon: Icon(Icons.qr_code_scanner_rounded, color: Colors.white),
-            label: 'Scan',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.archive_outlined, color: Colors.white70),
-            selectedIcon: Icon(Icons.archive_rounded, color: Colors.white),
+            icon: Icon(Icons.inventory_2_outlined),
+            selectedIcon: Icon(Icons.inventory_2_rounded),
             label: 'Tray',
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline, color: Colors.white70),
-            selectedIcon: Icon(Icons.person, color: Colors.white),
-            label: 'Profile',
+            icon: Icon(Icons.person_outline_rounded),
+            selectedIcon: Icon(Icons.person_rounded),
+            label: 'Profil',
           ),
         ],
       ),

@@ -1,51 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/forgot_password_screen.dart';
 import 'navigation_bar/main_navigation.dart';
 import 'screens/home.dart';
 import 'screens/analysis_screen.dart';
-import 'screens/scan_screen.dart';
 import 'screens/tray.dart';
 import 'screens/profile.dart';
 import 'auth/auth_service.dart';
 import 'screens/forgot_token.dart';
 import 'screens/forgot_new.dart';
 import 'screens/for_newuser.dart';
-import 'package:firebase_core/firebase_core.dart';
-import 'firebase_options.dart';
 import 'services/notification_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Load environment variables
   await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
-  final url = dotenv.env['SUPABASE_URL'];
+  final url     = dotenv.env['SUPABASE_URL'];
   final anonKey = dotenv.env['SUPABASE_ANON_KEY'];
-
   if (url == null || anonKey == null) {
     throw Exception('Missing Supabase configuration in environment variables.');
   }
 
-  await Supabase.initialize(
-    url: url,
-    anonKey: anonKey,
-  );
-
+  await Supabase.initialize(url: url, anonKey: anonKey);
   await NotificationService.initialize();
-
-  // Initialize custom authentication session
   await AuthService.initializeSession();
-
-  print('Berhasil terhubung dengan database');
 
   runApp(const MyApp());
 }
@@ -55,34 +43,43 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Material 3 — Blue seed, ikuti sistem
+    final colorScheme = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF1565C0),
+      brightness: Brightness.light,
+    );
+    final colorSchemeDark = ColorScheme.fromSeed(
+      seedColor: const Color(0xFF1565C0),
+      brightness: Brightness.dark,
+    );
+
     return MaterialApp(
       title: 'WITFood',
       debugShowCheckedModeBanner: false,
+      themeMode: ThemeMode.system, // ikuti sistem HP
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF24c6dc), brightness: Brightness.dark),
         useMaterial3: true,
+        colorScheme: colorScheme,
         fontFamily: 'Roboto',
       ),
       darkTheme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF24c6dc), brightness: Brightness.dark),
         useMaterial3: true,
+        colorScheme: colorSchemeDark,
         fontFamily: 'Roboto',
       ),
-      themeMode: ThemeMode.dark,
       home: const AuthWrapper(),
       routes: {
-        MainNavigation.routeName: (context) => const MainNavigation(),
-        '/home': (context) => const HomeScreen(),
-        '/analysis': (context) => const AnalysisScreen(),
-        '/scan': (context) => const ScanScreen(),
-        '/tray': (context) => const TrayPage(),
-        '/profile': (context) => const ProfilePage(),
-        LoginScreen.routeName: (context) => const LoginScreen(),
-        RegisterScreen.routeName: (context) => const RegisterScreen(),
-        ForgotPasswordScreen.routeName: (context) => const ForgotPasswordScreen(),
-        ForgotTokenScreen.routeName: (context) => const ForgotTokenScreen(),
-        ForgotNewPasswordScreen.routeName: (context) => const ForgotNewPasswordScreen(),
-        ForNewUserScreen.routeName: (context) => const ForNewUserScreen(),
+        MainNavigation.routeName:           (c) => const MainNavigation(),
+        '/home':                            (c) => const HomeScreen(),
+        '/analysis':                        (c) => const AnalysisScreen(),
+        '/tray':                            (c) => const TrayPage(),
+        '/profile':                         (c) => const ProfilePage(),
+        LoginScreen.routeName:              (c) => const LoginScreen(),
+        RegisterScreen.routeName:           (c) => const RegisterScreen(),
+        ForgotPasswordScreen.routeName:     (c) => const ForgotPasswordScreen(),
+        ForgotTokenScreen.routeName:        (c) => const ForgotTokenScreen(),
+        ForgotNewPasswordScreen.routeName:  (c) => const ForgotNewPasswordScreen(),
+        ForNewUserScreen.routeName:         (c) => const ForNewUserScreen(),
       },
     );
   }
@@ -90,7 +87,6 @@ class MyApp extends StatelessWidget {
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
-
   @override
   State<AuthWrapper> createState() => _AuthWrapperState();
 }
@@ -106,25 +102,24 @@ class _AuthWrapperState extends State<AuthWrapper> {
   }
 
   Future<void> _checkAuthStatus() async {
-    // Wait a bit to ensure AuthService.initializeSession() is complete
     await Future.delayed(const Duration(milliseconds: 100));
-    
     setState(() {
       _isLoggedIn = AuthService.isLoggedIn();
-      _isLoading = false;
+      _isLoading  = false;
     });
   }
 
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
-      return const Scaffold(
+      return Scaffold(
         body: Center(
-          child: CircularProgressIndicator(),
+          child: CircularProgressIndicator(
+            color: Theme.of(context).colorScheme.primary,
+          ),
         ),
       );
     }
-
     return _isLoggedIn ? const MainNavigation() : const LoginScreen();
   }
 }
