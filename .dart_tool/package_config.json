@@ -728,6 +728,12 @@
       "languageVersion": "2.12"
     },
     {
+      "name": "screenshot",
+      "rootUri": "file:///Users/720241/.pub-cache/hosted/pub.dev/screenshot-2.5.0",
+      "packageUri": "lib/",
+      "languageVersion": "2.12"
+    },
+    {
       "name": "shared_preferences",
       "rootUri": "file:///Users/720241/.pub-cache/hosted/pub.dev/shared_preferences-2.5.5",
       "packageUri": "lib/",

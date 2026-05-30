@@ -24,6 +24,7 @@
         "path_provider",
         "pdf",
         "printing",
+        "screenshot",
         "shared_preferences",
         "supabase_flutter"
       ],
@@ -1503,6 +1504,13 @@
       "version": "3.1.2",
       "dependencies": [
         "typed_data"
+      ]
+    },
+    {
+      "name": "screenshot",
+      "version": "2.5.0",
+      "dependencies": [
+        "flutter"
       ]
     }
   ],

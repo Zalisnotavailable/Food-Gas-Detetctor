@@ -93,13 +93,33 @@ class _ProfilePageState extends State<ProfilePage> {
             SliverAppBar(
               expandedHeight: 120,
               pinned: true,
-              backgroundColor: cs.primaryContainer,
+              backgroundColor: Colors.transparent,
               flexibleSpace: FlexibleSpaceBar(
                 titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                title: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Pengaturan', style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.w800, fontSize: 20)),
-                  Text('Akun & Konfigurasi', style: TextStyle(color: cs.onPrimaryContainer.withOpacity(0.7), fontSize: 11)),
-                ]),
+                title: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Pengaturan',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w800,
+                            fontSize: 20)),
+                    const Text('Akun & Konfigurasi',
+                        style: TextStyle(
+                            color: Colors.white70,
+                            fontSize: 11)),
+                  ],
+                ),
+                background: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [Color(0xFF1565C0), Color(0xFF64B5F6)],
+                    ),
+                  ),
+                ),
               ),
             ),
 

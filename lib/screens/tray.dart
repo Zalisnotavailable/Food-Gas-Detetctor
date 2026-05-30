@@ -115,13 +115,33 @@ class _TrayPageState extends State<TrayPage> {
           SliverAppBar(
             expandedHeight: 120,
             pinned: true,
-            backgroundColor: cs.primaryContainer,
+            backgroundColor: Colors.transparent,
             flexibleSpace: FlexibleSpaceBar(
               titlePadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-              title: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
-                Text('Manajemen Tray', style: TextStyle(color: cs.onPrimaryContainer, fontWeight: FontWeight.w800, fontSize: 18)),
-                Text('${_all.length} Data Tersimpan', style: TextStyle(color: cs.onPrimaryContainer.withOpacity(0.7), fontSize: 11)),
-              ]),
+              title: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Manajemen Tray',
+                      style: const TextStyle(
+                          color: Colors.white, // ← putih
+                          fontWeight: FontWeight.w800,
+                          fontSize: 18)),
+                  Text('${_all.length} Data Tersimpan',
+                      style: const TextStyle(
+                          color: Colors.white70, // ← putih transparan
+                          fontSize: 11)),
+                ],
+              ),
+              background: Container( // ← tambahkan gradient di sini
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF1565C0), Color(0xFF64B5F6)],
+                  ),
+                ),
+              ),
             ),
             actions: [
               IconButton(onPressed: _load, icon: Icon(Icons.refresh_rounded, color: cs.onPrimaryContainer)),

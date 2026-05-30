@@ -24,7 +24,7 @@ class ScanScreen extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
             sliver: SliverGrid.count(
               crossAxisCount: 2,
-              childAspectRatio: 1.6,
+              childAspectRatio: 1.55,
               mainAxisSpacing: 12,
               crossAxisSpacing: 12,
               children: const [

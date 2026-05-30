@@ -235,16 +235,16 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                 children: [
                   Text(
                     'Analitik Sensor',
-                    style: TextStyle(
-                      color: cs.onPrimaryContainer,
+                    style: const TextStyle(
+                      color: Colors.white,
                       fontWeight: FontWeight.w800,
                       fontSize: 20,
                     ),
                   ),
                   Text(
                     'Deep Analytics Berbasis Data',
-                    style: TextStyle(
-                      color: cs.onPrimaryContainer.withOpacity(0.7),
+                    style: const TextStyle(
+                      color: Colors.white70,
                       fontSize: 11,
                     ),
                   ),
@@ -255,7 +255,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [cs.primary, cs.primaryContainer],
+                    colors: [Color(0xFF1565C0), Color(0xFF64B5F6)],
                   ),
                 ),
               ),
@@ -440,7 +440,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                               crossAxisCount: 2,
                               mainAxisSpacing: 10,
                               crossAxisSpacing: 10,
-                              childAspectRatio: 1.6,
+                              childAspectRatio: 1.4,
                             ),
                             itemCount: 9,
                             itemBuilder: (_, i) {
@@ -579,7 +579,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                             physics:
                             const NeverScrollableScrollPhysics(),
                             crossAxisCount: 2,
-                            childAspectRatio: 2.4,
+                            childAspectRatio: 2.2,
                             crossAxisSpacing: 10,
                             mainAxisSpacing: 10,
                             children: [

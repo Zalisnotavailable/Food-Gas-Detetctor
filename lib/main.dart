@@ -61,11 +61,21 @@ class MyApp extends StatelessWidget {
         useMaterial3: true,
         colorScheme: colorScheme,
         fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1E88E5),
+          foregroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
         colorScheme: colorSchemeDark,
         fontFamily: 'Roboto',
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Color(0xFF1565C0),
+          foregroundColor: Colors.white,
+          surfaceTintColor: Colors.transparent,
+        ),
       ),
       home: const AuthWrapper(),
       routes: {
