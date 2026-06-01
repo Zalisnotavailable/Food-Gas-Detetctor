@@ -84,12 +84,13 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
   }
 
   List<double> _calcRadarValues() {
-    if (_latest == null) return [0.7, 0.6, 0.65, 0.55, 0.5, 0.6];
+    if (_latest == null) return [0.7, 0.6, 0.65, 0.55, 0.5, 0.6, 0.4, 0.45, 0.5];
     double norm(String key, double? val) {
       if (val == null) return 0.0;
       final thresholds = {
         'nh3': 25.0, 'h2s': 10.0, 'ch4': 100.0,
         'co2': 5000.0, 'voc': 1.0, 'c2h5oh': 50.0,
+        'co': 50.0, 'acetone': 500.0, 'h2': 100.0,
       };
       final max = thresholds[key] ?? 100.0;
       return (val / max).clamp(0.0, 1.0);
@@ -101,6 +102,9 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
       norm('c2h5oh', _latest!.c2h5oh),
       norm('voc', _latest!.voc),
       norm('co2', _latest!.co2),
+      norm('co', _latest!.co),
+      norm('acetone', _latest!.acetone),
+      norm('h2', _latest!.h2),
     ];
   }
 
@@ -881,9 +885,9 @@ class _RadarWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const labels = ['NH3', 'H2S', 'CH4', 'C2H5OH', 'VOC', 'CO2'];
+    const labels = ['NH3', 'H2S', 'CH4', 'C2H5OH', 'VOC', 'CO2', 'CO', 'Acetone', 'H2'];
     final safeValues =
-    List<double>.generate(6, (i) => i < values.length ? values[i] : 0.0);
+    List<double>.generate(9, (i) => i < values.length ? values[i] : 0.0);
 
     return RadarChart(
       RadarChartData(
