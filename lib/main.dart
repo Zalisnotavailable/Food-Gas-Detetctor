@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';           // ← TAMBAH
+import 'package:flutter_local_notifications/flutter_local_notifications.dart'; // ← TAMBAH
 import 'firebase_options.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
@@ -17,12 +19,38 @@ import 'screens/forgot_new.dart';
 import 'screens/for_newuser.dart';
 import 'services/notification_service.dart';
 
+// ← TAMBAH: harus top-level di main.dart, BUKAN di dalam class/service
+@pragma('vm:entry-point')
+Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await NotificationService.showLocalNotification(
+    title: message.notification?.title ?? 'Gas Alert',
+    body:  message.notification?.body  ?? '',
+  );
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await dotenv.load(fileName: ".env");
 
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
+  );
+
+  // ← TAMBAH: daftarkan background handler SEBELUM runApp
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // ← TAMBAH: buat notification channel SEBELUM runApp
+  await FlutterLocalNotificationsPlugin()
+      .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+      ?.createNotificationChannel(
+    const AndroidNotificationChannel(
+      'gas_alert_channel',
+      'Gas Alerts',
+      description: 'Notifikasi peringatan gas berbahaya',
+      importance: Importance.max,
+      playSound: true,
+    ),
   );
 
   final url     = dotenv.env['SUPABASE_URL'];

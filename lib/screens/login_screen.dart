@@ -365,7 +365,7 @@ class _HeaderIllustration extends StatelessWidget {
                 padding: const EdgeInsets.all(12),
                 color: Colors.black.withOpacity(0.25),
                 child: const Text(
-                  'Selamat datang di Food Goard Pro',
+                  'Selamat datang di What is In The Food',
                   style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                 ),
               ),

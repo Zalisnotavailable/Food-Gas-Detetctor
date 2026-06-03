@@ -32,7 +32,8 @@ class _TrayItem {
       gasValues: {
         'NH3': (map['nh3'] as num?)?.toDouble(), 'H2S': (map['h2s'] as num?)?.toDouble(),
         'CH4': (map['ch4'] as num?)?.toDouble(), 'CO2': (map['co2'] as num?)?.toDouble(),
-        'VOC': (map['voc'] as num?)?.toDouble(), 'CO':  (map['co']  as num?)?.toDouble(),
+        'VOC': (map['voc'] as num?)?.toDouble(), 'C2H5OH':  (map['c2h5oh']  as num?)?.toDouble(),
+        'CO':  (map['co']  as num?)?.toDouble(), 'ACETONE':  (map['acetone']  as num?)?.toDouble(),
         'H2':  (map['h2']  as num?)?.toDouble(),
       },
     );

@@ -66,7 +66,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     final sensors = {
       'nh3': _latest!.nh3, 'h2s': _latest!.h2s, 'ch4': _latest!.ch4,
       'co2': _latest!.co2, 'voc': _latest!.voc, 'c2h5oh': _latest!.c2h5oh,
-      'co': _latest!.co, 'h2': _latest!.h2,
+      'co': _latest!.co, 'acetone': _latest!.acetone, 'h2': _latest!.h2,
     };
     int normal = 0, warning = 0, danger = 0;
     for (final e in sensors.entries) {
@@ -173,7 +173,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     if (_latest == null) return 0;
     final sensors = [
       _latest!.nh3, _latest!.h2s, _latest!.ch4, _latest!.co2,
-      _latest!.voc, _latest!.c2h5oh, _latest!.co, _latest!.h2,
+      _latest!.voc, _latest!.c2h5oh, _latest!.co, _latest!.acetone, _latest!.h2,
     ];
     final online = sensors.where((v) => v != null).length;
     return online / sensors.length * 100;
@@ -197,6 +197,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
     check('VOC', 'voc', _latest!.voc);
     check('C2H5OH', 'c2h5oh', _latest!.c2h5oh);
     check('CO', 'co', _latest!.co);
+    check('Acetone', 'acetone', _latest!.acetone);
     check('H2', 'h2', _latest!.h2);
     final buf = StringBuffer();
     if (highSensors.isEmpty && warnSensors.isEmpty) {
@@ -461,9 +462,7 @@ class _AnalysisScreenState extends State<AnalysisScreen> {
                               ];
                               final (title, key, val, sensor, unit) =
                               entries[i];
-                              final status = key == 'acetone'
-                                  ? 'Normal'
-                                  : SensorService.getStatus(key, val);
+                              final status = SensorService.getStatus(key, val);
                               final isDanger = status == 'Danger';
                               final isWarning = status == 'Warning';
                               final tileColor = isDanger

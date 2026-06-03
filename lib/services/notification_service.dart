@@ -26,29 +26,12 @@ class NotificationService {
       const InitializationSettings(android: android, iOS: ios),
     );
 
-    // Buat notification channel (Android)
-    await _localNotif
-        .resolvePlatformSpecificImplementation<
-        AndroidFlutterLocalNotificationsPlugin>()
-        ?.createNotificationChannel(
-      const AndroidNotificationChannel(
-        'gas_alert_channel',
-        'Gas Alerts',
-        description: 'Notifikasi peringatan gas berbahaya',
-        importance: Importance.max,
-        playSound: true,
-      ),
-    );
-
     // Request permission
     final messaging = FirebaseMessaging.instance;
     await messaging.requestPermission(alert: true, badge: true, sound: true);
 
     // Subscribe ke topic FCM
     await messaging.subscribeToTopic('gas_alerts');
-
-    // Handler saat app di background/terminated
-    FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
     // Handler saat app di foreground
     FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
@@ -60,6 +43,10 @@ class NotificationService {
         body:  message.notification?.body  ?? '',
       );
     });
+
+    // ← TAMBAH: debug token
+    final token = await messaging.getToken();
+    print('📱 FCM Token: $token');
 
     print('✅ NotificationService initialized');
   }

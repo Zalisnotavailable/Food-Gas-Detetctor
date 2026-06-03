@@ -41,6 +41,165 @@ class _ProfilePageState extends State<ProfilePage> {
     ));
   }
 
+  Future<void> _deleteAccount() async {
+    final cs = Theme.of(context).colorScheme;
+
+    // Konfirmasi pertama
+    AwesomeDialog(
+      context: context,
+      dialogType: DialogType.warning,
+      animType: AnimType.scale,
+      title: 'Hapus Akun',
+      desc: 'Semua data akun Anda akan dihapus permanen dan tidak dapat dikembalikan. Lanjutkan?',
+      btnCancelText: 'Batal',
+      btnOkText: 'Hapus',
+      btnOkColor: Theme.of(context).colorScheme.error,
+      btnCancelOnPress: () {},
+      btnOkOnPress: () => _confirmDelete(),
+    ).show();
+  }
+
+  Future<void> _confirmDelete() async {
+    // Konfirmasi kedua — ketik "HAPUS"
+    final controller = TextEditingController();
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final cs = Theme.of(ctx).colorScheme;
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+          title: Text('Konfirmasi Akhir',
+              style: TextStyle(fontWeight: FontWeight.w800, color: cs.error)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('Ketik ', style: TextStyle(color: cs.onSurface)),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                decoration: BoxDecoration(
+                  color: cs.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text('HAPUS',
+                    style: TextStyle(
+                        fontWeight: FontWeight.w800,
+                        color: cs.error,
+                        letterSpacing: 2)),
+              ),
+              const SizedBox(height: 8),
+              Text('untuk mengkonfirmasi penghapusan akun.',
+                  style: TextStyle(color: cs.onSurfaceVariant, fontSize: 13)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: controller,
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: 'Ketik HAPUS',
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide(color: cs.error, width: 2),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Batal'),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(backgroundColor: cs.error),
+              onPressed: () {
+                if (controller.text.trim() == 'HAPUS') {
+                  Navigator.pop(ctx, true);
+                } else {
+                  ScaffoldMessenger.of(ctx).showSnackBar(
+                    const SnackBar(
+                      content: Text('Ketik HAPUS dengan huruf kapital'),
+                      behavior: SnackBarBehavior.floating,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Hapus Akun'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed != true) return;
+
+    // Proses hapus
+    try {
+      _showLoadingDialog();
+      final user = AuthService.getCurrentUser();
+      final userId = user?['id']?.toString();
+
+      if (userId != null) {
+
+        await Supabase.instance.client
+            .from('users')
+            .delete()
+            .eq('id', userId);
+      }
+
+      // Logout setelah hapus
+      await AuthService.logout();
+
+      if (!mounted) return;
+      Navigator.of(context).pop(); // tutup loading
+      Navigator.pushNamedAndRemoveUntil(
+          context, LoginScreen.routeName, (_) => false);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Akun berhasil dihapus'),
+          behavior: SnackBarBehavior.floating,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.of(context).pop(); // tutup loading
+      AwesomeDialog(
+        context: context,
+        dialogType: DialogType.error,
+        animType: AnimType.scale,
+        title: 'Gagal',
+        desc: 'Gagal menghapus akun: $e',
+        btnOkOnPress: () {},
+      ).show();
+    }
+  }
+
+  void _showLoadingDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: Card(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Menghapus akun...'),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   Future<void> _loadStats() async {
     setState(() => _loadingStats = true);
     try {
@@ -221,6 +380,19 @@ class _ProfilePageState extends State<ProfilePage> {
                             Navigator.pushNamedAndRemoveUntil(context, LoginScreen.routeName, (_) => false);
                           },
                         ).show(),
+                      ),
+                      Divider(height: 1, indent: 56, color: cs.outlineVariant),
+                      ListTile(
+                        leading: Icon(Icons.delete_forever_rounded, color: cs.error),
+                        title: Text(
+                          'Hapus Akun',
+                          style: TextStyle(color: cs.error, fontWeight: FontWeight.w600),
+                        ),
+                        subtitle: Text(
+                          'Hapus akun dan semua data secara permanen',
+                          style: TextStyle(color: cs.onSurfaceVariant, fontSize: 12),
+                        ),
+                        onTap: _deleteAccount,
                       ),
                     ]),
                   ),

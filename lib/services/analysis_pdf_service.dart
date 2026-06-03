@@ -307,6 +307,7 @@ class AnalysisPdfService {
       'VOC':    {'warning': 0.5,     'danger': 1.0},
       'C2H5OH': {'warning': 20.0,    'danger': 50.0},
       'CO':     {'warning': 9.0,     'danger': 35.0},
+      'ACETONE':     {'warning': 20.0,    'danger': 50.0},
       'H2':     {'warning': 20.0,    'danger': 50.0},
     };
     final t = thresholds[sensor];

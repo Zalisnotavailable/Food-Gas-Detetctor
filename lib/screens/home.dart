@@ -58,13 +58,13 @@ class _HomeScreenState extends State<HomeScreen> {
 
   List<String> _getDangerSensors() {
     if (_latest == null) return [];
-    final s = {'NH3': _latest!.nh3, 'H2S': _latest!.h2s, 'CH4': _latest!.ch4, 'CO2': _latest!.co2, 'VOC': _latest!.voc, 'C2H5OH': _latest!.c2h5oh, 'CO': _latest!.co, 'H2': _latest!.h2};
+    final s = {'NH3': _latest!.nh3, 'H2S': _latest!.h2s, 'CH4': _latest!.ch4, 'CO2': _latest!.co2, 'VOC': _latest!.voc, 'C2H5OH': _latest!.c2h5oh, 'CO': _latest!.co, 'Acetone': _latest!.acetone, 'H2': _latest!.h2};
     return s.entries.where((e) => SensorService.getStatus(e.key.toLowerCase(), e.value) == 'Danger').map((e) => e.key).toList();
   }
 
   List<String> _getWarningSensors() {
     if (_latest == null) return [];
-    final s = {'NH3': _latest!.nh3, 'H2S': _latest!.h2s, 'CH4': _latest!.ch4, 'CO2': _latest!.co2, 'VOC': _latest!.voc, 'C2H5OH': _latest!.c2h5oh, 'CO': _latest!.co, 'H2': _latest!.h2};
+    final s = {'NH3': _latest!.nh3, 'H2S': _latest!.h2s, 'CH4': _latest!.ch4, 'CO2': _latest!.co2, 'VOC': _latest!.voc, 'C2H5OH': _latest!.c2h5oh, 'CO': _latest!.co, 'Acetone': _latest!.acetone, 'H2': _latest!.h2};
     return s.entries.where((e) => SensorService.getStatus(e.key.toLowerCase(), e.value) == 'Warning').map((e) => e.key).toList();
   }
 
@@ -220,7 +220,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 _GasTile(title: 'VOC',     value: _fmt(_latest?.voc, d: 2),  unit: 'mg/m³', color: _tileColor(context, 'VOC',     _latest?.voc),     danger: _isDanger('VOC',     _latest?.voc),     cs: cs),
                 _GasTile(title: 'C2H5OH',  value: _fmt(_latest?.c2h5oh),     unit: 'ppm',   color: _tileColor(context, 'C2H5OH',  _latest?.c2h5oh),  danger: _isDanger('C2H5OH',  _latest?.c2h5oh),  cs: cs),
                 _GasTile(title: 'CO',      value: _fmt(_latest?.co),         unit: 'ppm',   color: _tileColor(context, 'CO',      _latest?.co),      danger: _isDanger('CO',      _latest?.co),      cs: cs),
-                _GasTile(title: 'Acetone', value: _fmt(_latest?.acetone, d: 2), unit: 'ppm', color: Theme.of(context).colorScheme.surfaceContainerLow, danger: false, cs: cs),
+                _GasTile(title: 'Acetone', value: _fmt(_latest?.acetone, d: 2), unit: 'ppm',   color: _tileColor(context, 'Acetone',      _latest?.acetone),      danger: _isDanger('Acetone',      _latest?.acetone),      cs: cs),
                 _GasTile(title: 'H2',      value: _fmt(_latest?.h2),         unit: 'ppm',   color: _tileColor(context, 'H2',      _latest?.h2),      danger: _isDanger('H2',      _latest?.h2),      cs: cs),
               ],
             ),

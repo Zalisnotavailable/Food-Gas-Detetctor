@@ -156,6 +156,7 @@ class SensorService {
       'voc':    {'warning': 0.5,   'danger': 1.0},
       'c2h5oh': {'warning': 20.0,  'danger': 50.0},
       'co':     {'warning': 9.0,   'danger': 35.0},
+      'acetone': {'warning': 20.0, 'danger': 50.0},
       'h2':     {'warning': 20.0,  'danger': 50.0},
     };
 
