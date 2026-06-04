@@ -379,4 +379,48 @@ class AuthService {
     await _googleSignIn.signOut();
     await logout();
   }
+
+  // ─── Update profil (nama & username) ─────────────────────────────────────
+  static Future<void> updateCurrentUser(Map<String, dynamic> updatedUser) async {
+    _currentUser = updatedUser;
+    await _saveUserSession(updatedUser);
+  }
+
+  // ─── Ganti password ───────────────────────────────────────────────────────
+  static Future<bool> changePassword({
+    required String oldPassword,
+    required String newPassword,
+  }) async {
+    try {
+      if (_currentUser == null) return false;
+      final userId    = _currentUser!['id']?.toString();
+      final hashedOld = _hashPassword(oldPassword);
+      final hashedNew = _hashPassword(newPassword);
+
+      // Verifikasi password lama
+      final user = await _supabase
+          .from('users')
+          .select('id')
+          .eq('id', userId!)
+          .eq('password', hashedOld)
+          .maybeSingle();
+
+      if (user == null) return false; // password lama salah
+
+      // Update password baru ke Supabase
+      await _supabase
+          .from('users')
+          .update({'password': hashedNew})
+          .eq('id', userId);
+
+      // Update local session
+      _currentUser!['password'] = hashedNew;
+      await _saveUserSession(_currentUser!);
+
+      return true;
+    } catch (e) {
+      print('changePassword error: $e');
+      return false;
+    }
+  }
 }
